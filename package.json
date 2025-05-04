@@ -9,10 +9,10 @@
     "dev": "convex dev --once && node setup.mjs && npm-run-all --parallel dev:frontend dev:backend",
     "dev:frontend": "vite --open",
     "dev:backend": "convex dev",
-    "lint": "tsc -p convex -noEmit --pretty false && tsc -p . -noEmit --pretty false && convex dev --once && vite build"
+    "lint": "tsc -p convex --noEmit --pretty false && tsc -p . --noEmit --pretty false && convex dev --once && vite build"
   },
   "dependencies": {
-    "node-sass":"^9.0.0",
+    "node-sass": "^9.0.0",
     "swiper": "^11.2.6",
     "express": "^4.18.2",
     "passport": "^0.6.0",
