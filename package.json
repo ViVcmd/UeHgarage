@@ -12,6 +12,7 @@
     "lint": "tsc -p convex --noEmit --pretty false && tsc -p . --noEmit --pretty false && convex dev --once && vite build"
   },
   "dependencies": {
+    "bcrypt": "^5.1.0"
     "node-sass": "^9.0.0",
     "swiper": "^11.2.6",
     "express": "^4.18.2",
