@@ -4,8 +4,8 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-	"build": "vite build",
-	"install-sapper": "npm install @sapper"
+    "build": "vite build",
+    "install-sapper": "npm install @sapper", 
     "dev": "convex dev --once && node setup.mjs && npm-run-all --parallel dev:frontend dev:backend",
     "dev:frontend": "vite --open",
     "dev:backend": "convex dev",
@@ -44,8 +44,4 @@
     "typescript-eslint": "^8.24.1",
     "vite": "^6.2.0"
   }
-}
-"scripts": {
- 
-  
 }
