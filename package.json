@@ -12,7 +12,6 @@
     "lint": "tsc -p convex --noEmit --pretty false && tsc -p . --noEmit --pretty false && convex dev --once && vite build"
   },
   "dependencies": {
-    "serverless-http": "^3.2.0"
     "node-sass": "^9.0.0",
     "swiper": "^11.2.6",
     "express": "^4.18.2",
@@ -27,7 +26,8 @@
     "react-dom": "^19.0.0",
     "resend": "^4.5.0",
     "sonner": "^2.0.3",
-    "tailwind-merge": "^3.1.0"
+    "tailwind-merge": "^3.1.0",
+    "serverless-http": "^3.2.0"
   },
   "overrides": {
     "convex": "1.21.1-alpha.1"
@@ -43,13 +43,5 @@
     "eslint": "^9.21.0",
     "eslint-plugin-react-hooks": "^5.1.0",
     "eslint-plugin-react-refresh": "^0.4.19",
-    "globals": "^15.15.0",
-    "npm-run-all": "^4.1.5",
-    "postcss": "~8",
-    "prettier": "^3.5.3",
-    "tailwindcss": "~3",
-    "typescript": "~5.7.2",
-    "typescript-eslint": "^8.24.1",
-    "vite": "^6.2.0"
-  }
-}
+    "globals": "^15.15.
+
