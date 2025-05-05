@@ -29,12 +29,13 @@ passport.use(
       callbackURL: '/.netlify/functions/auth/callback',
     },
     (accessToken, refreshToken, profile, done) => {
-      // You can save the user info in a database here
+      // Store the user profile in the session
       return done(null, profile);
     }
   )
 );
 
+// Serialize user to session
 passport.serializeUser((user, done) => done(null, user));
 passport.deserializeUser((user, done) => done(null, user));
 
@@ -61,7 +62,7 @@ app.get('/', (req, res) => {
   if (req.isAuthenticated()) {
     res.json({ message: `Hello, ${req.user.displayName}` });
   } else {
-    res.json({ message: 'Not authenticated' });
+    res.redirect('/auth/google');
   }
 });
 
