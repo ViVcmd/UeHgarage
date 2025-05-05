@@ -1,0 +1,2 @@
+# Redirect all authentication routes to the Netlify function
+/auth/* /.netlify/functions/auth 200
