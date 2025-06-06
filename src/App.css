@@ -1,0 +1,250 @@
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
+
+.App {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  min-height: 100vh;
+  color: #1f2937; /* Ensure default text is dark */
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  color: #1f2937; /* Dark text for body */
+}
+
+/* Fix text color issues */
+.text-white {
+  color: #ffffff !important;
+}
+
+.text-black {
+  color: #000000 !important;
+}
+
+.text-gray-900 {
+  color: #111827 !important;
+}
+
+.text-gray-800 {
+  color: #1f2937 !important;
+}
+
+.text-gray-700 {
+  color: #374151 !important;
+}
+
+.text-gray-600 {
+  color: #4b5563 !important;
+}
+
+.text-gray-500 {
+  color: #6b7280 !important;
+}
+
+/* Ensure admin dashboard text is dark */
+.admin-text {
+  color: #1f2937 !important;
+}
+
+/* Table text fixes */
+table th,
+table td {
+  color: #1f2937 !important;
+}
+
+/* Form input text */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+textarea {
+  color: #1f2937 !important;
+}
+
+/* Button text fixes */
+button {
+  color: inherit;
+}
+
+.btn-primary {
+  color: #ffffff !important;
+}
+
+/* Custom animations */
+@keyframes pulse-garage {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 0.8;
+  }
+}
+
+.garage-button:hover {
+  animation: pulse-garage 2s infinite;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .container {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  
+  .garage-control-button {
+    padding: 1.5rem 2rem;
+    font-size: 1.25rem;
+  }
+}
+
+/* Loading spinner */
+.spinner {
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #3498db;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Status messages */
+.status-message {
+  transition: all 0.3s ease-in-out;
+}
+
+/* Google button styling */
+.google-signin-btn {
+  transition: all 0.2s ease-in-out;
+}
+
+.google-signin-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Invitation code input styling */
+.invitation-input {
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+/* Admin dashboard styling */
+.admin-card {
+  transition: all 0.2s ease-in-out;
+}
+
+.admin-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+}
+
+/* Responsive design improvements */
+@media (max-width: 640px) {
+  .garage-icon {
+    width: 80px;
+    height: 80px;
+  }
+  
+  .main-button {
+    padding: 1rem 2rem;
+    font-size: 1.125rem;
+  }
+  
+  .header-text {
+    font-size: 1.5rem;
+  }
+}
+
+/* Ensure all text in admin sections is dark */
+.admin-section,
+.admin-section * {
+  color: #1f2937 !important;
+}
+
+.admin-section .text-white {
+  color: #ffffff !important;
+}
+
+/* Fix any remaining white text issues */
+.bg-white * {
+  color: #1f2937;
+}
+
+.bg-white .text-white {
+  color: #ffffff !important;
+}
+
+.bg-white button {
+  color: inherit;
+}
+
+.bg-white button.bg-blue-600,
+.bg-white button.bg-green-600,
+.bg-white button.bg-red-600,
+.bg-white button.bg-purple-600 {
+  color: #ffffff !important;
+}
+
+/* Focus states for accessibility */
+button:focus,
+input:focus {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .bg-blue-600 {
+    background-color: #1e40af;
+  }
+  
+  .border-gray-300 {
+    border-color: #000;
+  }
+}
+
+/* Print styles */
+@media print {
+  .no-print {
+    display: none;
+  }
+}
+
+/* Dark mode prevention - force light mode */
+@media (prefers-color-scheme: dark) {
+  .App,
+  body,
+  * {
+    color: #1f2937 !important;
+    background-color: inherit;
+  }
+  
+  .bg-white {
+    background-color: #ffffff !important;
+    color: #1f2937 !important;
+  }
+  
+  .text-gray-900 {
+    color: #111827 !important;
+  }
+  
+  .text-gray-600 {
+    color: #4b5563 !important;
+  }
+}
