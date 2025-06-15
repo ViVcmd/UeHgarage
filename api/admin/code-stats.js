@@ -1,25 +1,38 @@
-const database = require('../utils/database');
-const authHelper = require('../utils/auth-helper');
 
-module.exports = async function (context, req) {
+const database = require('./utils/database');
+
+exports.handler = async (event, context) => {
+    if (event.httpMethod !== 'GET') {
+        return {
+            statusCode: 405,
+            body: JSON.stringify({ error: 'Method not allowed' })
+        };
+    }
+
     try {
-        // Check authentication
-        const user = authHelper.getUserFromRequest(req);
-        if (!user) {
-            return authHelper.createErrorResponse('Not authenticated', 401);
-        }
-
         // Check if admin
-        if (!authHelper.isAdmin(req)) {
-            return authHelper.createErrorResponse('Admin access required', 403);
+        const userEmail = event.headers['x-user-email'];
+        const adminEmail = process.env.ADMIN_EMAIL;
+        
+        if (userEmail !== adminEmail) {
+            return {
+                statusCode: 403,
+                body: JSON.stringify({ error: 'Admin access required' })
+            };
         }
 
         const stats = await database.getCodeStats();
 
-        context.res = authHelper.createSuccessResponse(stats);
+        return {
+            statusCode: 200,
+            body: JSON.stringify(stats)
+        };
 
     } catch (error) {
         console.error('Code stats error:', error);
-        context.res = authHelper.createErrorResponse('Internal server error', 500);
+        return {
+            statusCode: 500,
+            body: JSON.stringify({ error: 'Internal server error' })
+        };
     }
 };
