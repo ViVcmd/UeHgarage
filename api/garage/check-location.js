@@ -1,63 +1,66 @@
-const { isWithinRange, isInSwitzerland } = require('../utils/geolocation');
-const authHelper = require('../utils/auth-helper');
+const { calculateDistance, isInSwitzerland } = require('./utils/geolocation');
+const database = require('./utils/database');
 
-module.exports = async function (context, req) {
+exports.handler = async (event, context) => {
+    if (event.httpMethod !== 'POST') {
+        return {
+            statusCode: 405,
+            body: JSON.stringify({ error: 'Method not allowed' })
+        };
+    }
+
     try {
-        // Check authentication
-        const user = authHelper.getUserFromRequest(req);
-        if (!user) {
-            return authHelper.createErrorResponse('Not authenticated', 401);
-        }
-
-        // Check if user is authorized
-        const isAuthorized = await authHelper.isAuthorized(req);
-        if (!isAuthorized) {
-            return authHelper.createErrorResponse('User not authorized', 403);
-        }
-
-        // Validate location data
-        const userLocation = req.body.location;
-        if (!userLocation || typeof userLocation.lat !== 'number' || typeof userLocation.lng !== 'number') {
-            return authHelper.createErrorResponse('Valid location data is required', 400);
+        const { location } = JSON.parse(event.body);
+        
+        if (!location || typeof location.lat !== 'number' || typeof location.lng !== 'number') {
+            return {
+                statusCode: 400,
+                body: JSON.stringify({ error: 'Valid location data is required' })
+            };
         }
 
         // Check if location is in Switzerland
-        if (!isInSwitzerland(userLocation.lat, userLocation.lng)) {
-            context.res = authHelper.createSuccessResponse({
-                allowed: false,
-                distance: null,
-                maxDistance: parseInt(process.env.MAX_DISTANCE_METERS) || 1000,
-                reason: 'Location outside allowed region'
-            });
-            return;
+        if (!isInSwitzerland(location.lat, location.lng)) {
+            return {
+                statusCode: 200,
+                body: JSON.stringify({
+                    allowed: false,
+                    distance: null,
+                    maxDistance: 1000,
+                    reason: 'Location outside allowed region'
+                })
+            };
         }
 
-        // Get garage location from environment
+        // Get garage location and settings
+        const settings = await database.getSettings();
         const garageLocation = {
             lat: parseFloat(process.env.GARAGE_LAT),
             lng: parseFloat(process.env.GARAGE_LNG)
         };
-        
-        const maxDistance = parseInt(process.env.MAX_DISTANCE_METERS) || 1000;
-        
-        // Check location proximity
-        const locationCheck = isWithinRange(
-            userLocation.lat,
-            userLocation.lng,
-            garageLocation.lat,
-            garageLocation.lng,
-            maxDistance
+        const maxDistance = settings.max_distance_meters || 1000;
+
+        // Calculate distance
+        const distance = calculateDistance(
+            location.lat, location.lng,
+            garageLocation.lat, garageLocation.lng
         );
 
-        context.res = authHelper.createSuccessResponse({
-            allowed: locationCheck.allowed,
-            distance: locationCheck.distance,
-            maxDistance: locationCheck.maxDistance,
-            accuracy: locationCheck.accuracy
-        });
+        return {
+            statusCode: 200,
+            body: JSON.stringify({
+                allowed: distance <= maxDistance,
+                distance: distance,
+                maxDistance: maxDistance,
+                accuracy: 'high'
+            })
+        };
 
     } catch (error) {
         console.error('Location check error:', error);
-        context.res = authHelper.createErrorResponse('Internal server error', 500);
+        return {
+            statusCode: 500,
+            body: JSON.stringify({ error: 'Internal server error' })
+        };
     }
 };
