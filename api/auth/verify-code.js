@@ -1,68 +1,69 @@
-const database = require('../utils/database');
-const authHelper = require('../utils/auth-helper');
+const database = require('./utils/database');
 
-module.exports = async function (context, req) {
+exports.handler = async (event, context) => {
+    if (event.httpMethod !== 'POST') {
+        return {
+            statusCode: 405,
+            body: JSON.stringify({ error: 'Method not allowed' })
+        };
+    }
+
     try {
-        // Check authentication
-        const user = authHelper.getUserFromRequest(req);
-        if (!user) {
-            return authHelper.createErrorResponse('Not authenticated', 401);
-        }
-
-        // Rate limiting
-        const rateLimit = await authHelper.checkRateLimit(`verify_${user.email}`, 5, 15);
-        if (!rateLimit.allowed) {
-            await authHelper.logSecurityEvent('Rate limit exceeded', { action: 'verify-code' }, req);
-            return authHelper.createErrorResponse('Too many attempts. Please try again later.', 429);
-        }
-
-        const { email, code } = req.body;
+        const { email, code } = JSON.parse(event.body);
         
-        // Validate inputs
         if (!email || !code) {
-            return authHelper.createErrorResponse('Email and code are required', 400);
-        }
-
-        if (!authHelper.isValidEmail(email)) {
-            return authHelper.createErrorResponse('Invalid email format', 400);
-        }
-
-        // Ensure the email matches the authenticated user
-        if (email !== user.email) {
-            await authHelper.logSecurityEvent('Email mismatch in code verification', { 
-                requestedEmail: email, 
-                userEmail: user.email 
-            }, req);
-            return authHelper.createErrorResponse('Email mismatch', 403);
+            return {
+                statusCode: 400,
+                body: JSON.stringify({ error: 'Email and code are required' })
+            };
         }
 
         // Check if user is authorized
-        const isAuthorized = await authHelper.isAuthorized(req);
-        if (!isAuthorized) {
-            await authHelper.logSecurityEvent('Unauthorized code verification attempt', { email }, req);
-            return authHelper.createErrorResponse('User not authorized', 403);
+        const isWhitelisted = await database.isWhitelisted(email);
+        const isBlacklisted = await database.isBlacklisted(email);
+        
+        if (!isWhitelisted || isBlacklisted) {
+            const ipAddress = event.headers['x-forwarded-for'] || event.headers['x-real-ip'];
+            await database.logActivity('Unauthorized code verification attempt', email, email, ipAddress);
+            
+            return {
+                statusCode: 403,
+                body: JSON.stringify({
+                    success: false,
+                    message: 'User not authorized'
+                })
+            };
         }
 
         // Validate and use the code
         try {
             await database.validateAndUseCode(email, code);
             
-            await authHelper.logSecurityEvent('Successful code verification', { email }, req);
-            
-            context.res = authHelper.createSuccessResponse({
-                message: 'Access code verified successfully'
-            });
+            return {
+                statusCode: 200,
+                body: JSON.stringify({
+                    success: true,
+                    message: 'Access code verified successfully'
+                })
+            };
         } catch (error) {
-            await authHelper.logSecurityEvent('Failed code verification', { 
-                email, 
-                error: error.message 
-            }, req);
+            const ipAddress = event.headers['x-forwarded-for'] || event.headers['x-real-ip'];
+            await database.logActivity('Failed code verification', `${email}: ${error.message}`, email, ipAddress);
             
-            context.res = authHelper.createErrorResponse('Invalid or expired access code', 401);
+            return {
+                statusCode: 401,
+                body: JSON.stringify({
+                    success: false,
+                    message: 'Invalid or expired access code'
+                })
+            };
         }
 
     } catch (error) {
         console.error('Code verification error:', error);
-        context.res = authHelper.createErrorResponse('Internal server error', 500);
+        return {
+            statusCode: 500,
+            body: JSON.stringify({ error: 'Internal server error' })
+        };
     }
 };
