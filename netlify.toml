@@ -1,17 +1,30 @@
 [build]
   command = "npm run build"
   publish = "public"
-
-[functions]
-  directory = "api"
+  functions = "api"
 
 [[redirects]]
-  from = "/api/*"
-  to = "/.netlify/functions/:splat"
+  from = "/api/admin/*"
+  to = "/.netlify/functions/admin/:splat"
   status = 200
 
 [[redirects]]
-  from = "/admin/*"
+  from = "/api/auth/*"
+  to = "/.netlify/functions/auth/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/api/garage/*"
+  to = "/.netlify/functions/garage/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/api/utils/*"
+  to = "/.netlify/functions/utils/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/api/*"
   to = "/.netlify/functions/:splat"
   status = 200
 
