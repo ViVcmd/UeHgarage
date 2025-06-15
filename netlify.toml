@@ -1,0 +1,12 @@
+[build]
+  functions = "./api"
+  publish = "public"
+
+[build.environment]
+  NODE_VERSION = "18"
+
+# SPA fallback
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
