@@ -15,7 +15,7 @@
     "jsonwebtoken": "^9.0.0",
     "crypto": "^1.0.1",
     "bcryptjs": "^2.4.3",
-    "rate-limiter-flexible": "^3.0.8"
+    "rate-limiter-flexible": "^7.1.1"
   },
   "devDependencies": {
     "@azure/static-web-apps-cli": "^1.1.0"
