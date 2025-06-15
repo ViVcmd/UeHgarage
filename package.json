@@ -14,9 +14,15 @@
     "pg": "^8.11.3",
     "bcryptjs": "^2.4.3",
     "jsonwebtoken": "^9.0.2",
-    "@azure/data-tables": "^13.2.2"
+    "@azure/data-tables": "^13.2.2",
+    "@azure/cosmos": "^4.0.0",
+    "@azure/identity": "^4.0.1",
+    "encoding": "^0.1.13"
   },
   "devDependencies": {
     "netlify-cli": "^17.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }
