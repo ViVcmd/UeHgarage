@@ -1,51 +1,56 @@
-const authHelper = require('../utils/auth-helper');
-const bcrypt = require('bcryptjs');
+const database = require('./utils/database');
 
-module.exports = async function (context, req) {
+exports.handler = async (event, context) => {
+    if (event.httpMethod !== 'POST') {
+        return {
+            statusCode: 405,
+            body: JSON.stringify({ error: 'Method not allowed' })
+        };
+    }
+
     try {
-        const { email, code } = req.body;
+        const { email, code } = JSON.parse(event.body);
         
-        // Validate inputs
         if (!email || !code) {
-            return authHelper.createErrorResponse('Email and code are required', 400);
-        }
-
-        if (!authHelper.isValidEmail(email)) {
-            return authHelper.createErrorResponse('Invalid email format', 400);
-        }
-
-        // Rate limiting for admin login attempts
-        const rateLimit = await authHelper.checkRateLimit(`admin_login_${email}`, 3, 30);
-        if (!rateLimit.allowed) {
-            await authHelper.logSecurityEvent('Admin login rate limit exceeded', { email }, req);
-            return authHelper.createErrorResponse('Too many login attempts. Please try again later.', 429);
+            return {
+                statusCode: 400,
+                body: JSON.stringify({ error: 'Email and code are required' })
+            };
         }
 
         const adminEmail = process.env.ADMIN_EMAIL;
         const adminCode = process.env.ADMIN_CODE;
         
-        // Verify admin credentials
+        const ipAddress = event.headers['x-forwarded-for'] || event.headers['x-real-ip'];
+        const userAgent = event.headers['user-agent'];
+        
         if (email === adminEmail && code === adminCode) {
-            console.log(`UeH Garage: Admin login successful for ${email}`);
+            await database.logActivity('Admin login successful', email, email, ipAddress, userAgent);
             
-            await authHelper.logSecurityEvent('Successful admin login', { email }, req);
-            
-            context.res = authHelper.createSuccessResponse({
-                message: 'Admin login successful'
-            });
+            return {
+                statusCode: 200,
+                body: JSON.stringify({
+                    success: true,
+                    message: 'Admin login successful'
+                })
+            };
         } else {
-            console.log(`UeH Garage: Admin login failed for ${email}`);
+            await database.logActivity('Admin login failed', email, email, ipAddress, userAgent);
             
-            await authHelper.logSecurityEvent('Failed admin login attempt', { 
-                email,
-                reason: 'Invalid credentials'
-            }, req);
-            
-            context.res = authHelper.createErrorResponse('Invalid admin credentials', 401);
+            return {
+                statusCode: 401,
+                body: JSON.stringify({
+                    success: false,
+                    message: 'Invalid admin credentials'
+                })
+            };
         }
 
     } catch (error) {
         console.error('Admin login error:', error);
-        context.res = authHelper.createErrorResponse('Internal server error', 500);
+        return {
+            statusCode: 500,
+            body: JSON.stringify({ error: 'Internal server error' })
+        };
     }
 };
