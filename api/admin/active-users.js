@@ -1,37 +1,37 @@
-const database = require('../utils/database');
-const authHelper = require('../utils/auth-helper');
+const database = require('./utils/database');
 
-module.exports = async function (context, req) {
+exports.handler = async (event, context) => {
+    if (event.httpMethod !== 'GET') {
+        return {
+            statusCode: 405,
+            body: JSON.stringify({ error: 'Method not allowed' })
+        };
+    }
+
     try {
-        // Check authentication
-        const user = authHelper.getUserFromRequest(req);
-        if (!user) {
-            return authHelper.createErrorResponse('Not authenticated', 401);
-        }
-
         // Check if admin
-        if (!authHelper.isAdmin(req)) {
-            return authHelper.createErrorResponse('Admin access required', 403);
+        const userEmail = event.headers['x-user-email'];
+        const adminEmail = process.env.ADMIN_EMAIL;
+        
+        if (userEmail !== adminEmail) {
+            return {
+                statusCode: 403,
+                body: JSON.stringify({ error: 'Admin access required' })
+            };
         }
 
-        // Get recent activity to determine active users
-        const activities = await database.getActivityLog(100);
-        const recentUsers = new Set();
-        const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+        const result = await database.getActiveUsers();
 
-        activities.forEach(activity => {
-            if (new Date(activity.timestamp) > oneDayAgo && activity.user !== 'system') {
-                recentUsers.add(activity.user);
-            }
-        });
-
-        context.res = authHelper.createSuccessResponse({
-            count: recentUsers.size,
-            users: Array.from(recentUsers)
-        });
+        return {
+            statusCode: 200,
+            body: JSON.stringify(result)
+        };
 
     } catch (error) {
         console.error('Active users error:', error);
-        context.res = authHelper.createErrorResponse('Internal server error', 500);
+        return {
+            statusCode: 500,
+            body: JSON.stringify({ error: 'Internal server error' })
+        };
     }
 };
