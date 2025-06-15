@@ -1,82 +1,91 @@
-const UeHGarageShellyController = require('../utils/shelly');
-const { isWithinRange, isInSwitzerland } = require('../utils/geolocation');
-const authHelper = require('../utils/auth-helper');
-const database = require('../utils/database');
+const database = require('./utils/database');
+const { calculateDistance, isInSwitzerland } = require('./utils/geolocation');
+const UeHGarageShellyController = require('./utils/shelly');
 
-module.exports = async function (context, req) {
+exports.handler = async (event, context) => {
+    if (event.httpMethod !== 'POST') {
+        return {
+            statusCode: 405,
+            body: JSON.stringify({ error: 'Method not allowed' })
+        };
+    }
+
     try {
-        // Check authentication
-        const user = authHelper.getUserFromRequest(req);
-        if (!user) {
-            return authHelper.createErrorResponse('Not authenticated', 401);
+        // Get user from Netlify Identity (if using) or custom auth
+        const userEmail = event.headers['x-user-email']; // You'll need to implement this
+        
+        if (!userEmail) {
+            return {
+                statusCode: 401,
+                body: JSON.stringify({ error: 'Not authenticated' })
+            };
         }
 
         // Check if user is authorized
-        const isAuthorized = await authHelper.isAuthorized(req);
-        if (!isAuthorized) {
-            await authHelper.logSecurityEvent('Unauthorized garage control attempt', { 
-                email: user.email 
-            }, req);
-            return authHelper.createErrorResponse('User not authorized', 403);
-        }
-
-        // Rate limiting for garage control
-        const rateLimit = await authHelper.checkRateLimit(`garage_control_${user.email}`, 10, 5);
-        if (!rateLimit.allowed) {
-            await authHelper.logSecurityEvent('Garage control rate limit exceeded', { 
-                email: user.email 
-            }, req);
-            return authHelper.createErrorResponse('Too many control attempts. Please wait.', 429);
-        }
-
-        console.log(`UeH Garage: Control request from ${user.email}`);
+        const isAuthorized = await database.isWhitelisted(userEmail) && 
+                           !(await database.isBlacklisted(userEmail));
         
-        // Validate location data
-        const userLocation = req.body.location;
-        if (!userLocation || typeof userLocation.lat !== 'number' || typeof userLocation.lng !== 'number') {
-            return authHelper.createErrorResponse('Valid location data is required', 400);
+        if (!isAuthorized) {
+            const ipAddress = event.headers['x-forwarded-for'] || event.headers['x-real-ip'];
+            await database.logActivity('Unauthorized garage control attempt', userEmail, userEmail, ipAddress);
+            
+            return {
+                statusCode: 403,
+                body: JSON.stringify({ error: 'User not authorized' })
+            };
         }
 
-        // Additional security: Check if location is in Switzerland
-        if (!isInSwitzerland(userLocation.lat, userLocation.lng)) {
-            await authHelper.logSecurityEvent('Garage control from outside Switzerland', { 
-                email: user.email,
-                location: userLocation
-            }, req);
-            return authHelper.createErrorResponse('Access denied: Location outside allowed region', 403);
+        const { location } = JSON.parse(event.body);
+        
+        if (!location || typeof location.lat !== 'number' || typeof location.lng !== 'number') {
+            return {
+                statusCode: 400,
+                body: JSON.stringify({ error: 'Valid location data is required' })
+            };
         }
 
-        // Get garage location from environment
+        // Check if location is in Switzerland
+        if (!isInSwitzerland(location.lat, location.lng)) {
+            const ipAddress = event.headers['x-forwarded-for'] || event.headers['x-real-ip'];
+            await database.logActivity('Garage control from outside Switzerland', userEmail, userEmail, ipAddress);
+            
+            return {
+                statusCode: 403,
+                body: JSON.stringify({ 
+                    error: 'Access denied: Location outside allowed region' 
+                })
+            };
+        }
+
+        // Get garage location and max distance from settings
+        const settings = await database.getSettings();
         const garageLocation = {
             lat: parseFloat(process.env.GARAGE_LAT),
             lng: parseFloat(process.env.GARAGE_LNG)
         };
-        
-        const maxDistance = parseInt(process.env.MAX_DISTANCE_METERS) || 1000;
-        
+        const maxDistance = settings.max_distance_meters || 1000;
+
         // Check location proximity
-        const locationCheck = isWithinRange(
-            userLocation.lat,
-            userLocation.lng,
-            garageLocation.lat,
-            garageLocation.lng,
-            maxDistance
+        const distance = calculateDistance(
+            location.lat, location.lng,
+            garageLocation.lat, garageLocation.lng
         );
-        
-        if (!locationCheck.allowed) {
-            console.log(`UeH Garage: Access denied - distance ${Math.round(locationCheck.distance)}m exceeds ${maxDistance}m`);
-            
-            await authHelper.logSecurityEvent('Garage control denied - distance', { 
-                email: user.email,
-                distance: locationCheck.distance,
-                maxDistance: maxDistance
-            }, req);
-            
-            context.res = authHelper.createErrorResponse(
-                `Too far from UeH Garage. Distance: ${Math.round(locationCheck.distance)}m, Max: ${maxDistance}m`,
-                403
+
+        if (distance > maxDistance) {
+            const ipAddress = event.headers['x-forwarded-for'] || event.headers['x-real-ip'];
+            await database.logActivity(
+                'Garage control denied - distance', 
+                `${Math.round(distance)}m > ${maxDistance}m`, 
+                userEmail, 
+                ipAddress
             );
-            return;
+            
+            return {
+                statusCode: 403,
+                body: JSON.stringify({
+                    error: `Too far from UeH Garage. Distance: ${Math.round(distance)}m, Max: ${maxDistance}m`
+                })
+            };
         }
 
         // Control Shelly device
@@ -84,45 +93,42 @@ module.exports = async function (context, req) {
         const result = await shelly.openGarage();
 
         if (result.success) {
-            console.log('UeH Garage: Successfully opened');
-            
             await database.logActivity(
                 'Garage opened',
-                `Distance: ${Math.round(locationCheck.distance)}m`,
-                user.email
+                `Distance: ${Math.round(distance)}m`,
+                userEmail
             );
             
-            context.res = authHelper.createSuccessResponse({
-                message: result.alreadyOpen ? 'UeH Garage was already open' : 'UeH Garage opened successfully',
-                distance: Math.round(locationCheck.distance),
-                status: result.status || 'Open',
-                alreadyOpen: result.alreadyOpen || false
-            });
+            return {
+                statusCode: 200,
+                body: JSON.stringify({
+                    success: true,
+                    message: result.alreadyOpen ? 'UeH Garage was already open' : 'UeH Garage opened successfully',
+                    distance: Math.round(distance),
+                    status: result.status || 'Open',
+                    alreadyOpen: result.alreadyOpen || false
+                })
+            };
         } else {
-            console.log('UeH Garage: Failed to open -', result.error);
-            
             await database.logActivity(
                 'Garage control failed',
                 result.error,
-                user.email
+                userEmail
             );
             
-            context.res = authHelper.createErrorResponse(
-                'Failed to control UeH Garage: ' + result.error,
-                500
-            );
+            return {
+                statusCode: 500,
+                body: JSON.stringify({
+                    error: 'Failed to control UeH Garage: ' + result.error
+                })
+            };
         }
 
     } catch (error) {
-        console.error('UeH Garage: Control error -', error.message);
-        
-        const user = authHelper.getUserFromRequest(req);
-        await database.logActivity(
-            'Garage control error',
-            error.message,
-            user?.email || 'unknown'
-        );
-        
-        context.res = authHelper.createErrorResponse('Internal server error', 500);
+        console.error('Garage control error:', error);
+        return {
+            statusCode: 500,
+            body: JSON.stringify({ error: 'Internal server error' })
+        };
     }
 };
