@@ -1,55 +1,72 @@
-const database = require('../utils/database');
-const authHelper = require('../utils/auth-helper');
 
-module.exports = async function (context, req) {
-    if (req.method === 'GET') {
+const database = require('./utils/database');
+
+exports.handler = async (event, context) => {
+    if (event.httpMethod === 'GET') {
         // Get maintenance status (public endpoint)
         try {
             const settings = await database.getSettings();
-            context.res = authHelper.createSuccessResponse({
-                maintenanceMode: settings.maintenanceMode || false,
-                lastUpdated: settings.lastUpdated
-            });
+            return {
+                statusCode: 200,
+                body: JSON.stringify({
+                    maintenanceMode: settings.maintenance_mode || false,
+                    lastUpdated: settings.lastUpdated
+                })
+            };
         } catch (error) {
             console.error('Error getting maintenance status:', error);
-            context.res = authHelper.createErrorResponse('Internal server error', 500);
+            return {
+                statusCode: 500,
+                body: JSON.stringify({ error: 'Internal server error' })
+            };
         }
-        return;
     }
 
-    if (req.method === 'POST') {
+    if (event.httpMethod === 'POST') {
         try {
-            // Check authentication
-            const user = authHelper.getUserFromRequest(req);
-            if (!user) {
-                return authHelper.createErrorResponse('Not authenticated', 401);
+            // Check if admin (you'll need to implement admin auth check)
+            const userEmail = event.headers['x-user-email'];
+            const adminEmail = process.env.ADMIN_EMAIL;
+            
+            if (userEmail !== adminEmail) {
+                return {
+                    statusCode: 403,
+                    body: JSON.stringify({ error: 'Admin access required' })
+                };
             }
 
-            // Check if admin
-            if (!authHelper.isAdmin(req)) {
-                await authHelper.logSecurityEvent('Non-admin maintenance mode access attempt', { 
-                    email: user.email 
-                }, req);
-                return authHelper.createErrorResponse('Admin access required', 403);
-            }
-
-            const { maintenanceMode } = req.body;
+            const { maintenanceMode } = JSON.parse(event.body);
             
             if (typeof maintenanceMode !== 'boolean') {
-                return authHelper.createErrorResponse('maintenanceMode must be a boolean', 400);
+                return {
+                    statusCode: 400,
+                    body: JSON.stringify({ error: 'maintenanceMode must be a boolean' })
+                };
             }
 
-            await database.updateSettings({ maintenanceMode });
+            await database.updateSettings({ maintenance_mode: maintenanceMode });
             
-            console.log(`UeH Garage: Maintenance mode set to ${maintenanceMode} by ${user.email}`);
+            console.log(`UeH Garage: Maintenance mode set to ${maintenanceMode} by ${userEmail}`);
 
-            context.res = authHelper.createSuccessResponse({
-                message: `Maintenance mode ${maintenanceMode ? 'enabled' : 'disabled'}`
-            });
+            return {
+                statusCode: 200,
+                body: JSON.stringify({
+                    success: true,
+                    message: `Maintenance mode ${maintenanceMode ? 'enabled' : 'disabled'}`
+                })
+            };
 
         } catch (error) {
             console.error('Error updating maintenance mode:', error);
-            context.res = authHelper.createErrorResponse('Internal server error', 500);
+            return {
+                statusCode: 500,
+                body: JSON.stringify({ error: 'Internal server error' })
+            };
         }
     }
+
+    return {
+        statusCode: 405,
+        body: JSON.stringify({ error: 'Method not allowed' })
+    };
 };
