@@ -1,80 +1,122 @@
-const database = require('../utils/database');
-const authHelper = require('../utils/auth-helper');
 
-module.exports = async function (context, req) {
+const database = require('./utils/database');
+
+function isValidEmail(email) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+}
+
+exports.handler = async (event, context) => {
     try {
-        // Check authentication
-        const user = authHelper.getUserFromRequest(req);
-        if (!user) {
-            return authHelper.createErrorResponse('Not authenticated', 401);
-        }
-
         // Check if admin
-        if (!authHelper.isAdmin(req)) {
-            await authHelper.logSecurityEvent('Non-admin blacklist access attempt', { 
-                email: user.email 
-            }, req);
-            return authHelper.createErrorResponse('Admin access required', 403);
+        const userEmail = event.headers['x-user-email'];
+        const adminEmail = process.env.ADMIN_EMAIL;
+        
+        if (userEmail !== adminEmail) {
+            return {
+                statusCode: 403,
+                body: JSON.stringify({ error: 'Admin access required' })
+            };
         }
 
-        if (req.method === 'GET') {
+        if (event.httpMethod === 'GET') {
             const blacklisted = await database.getBlacklist();
-            context.res = authHelper.createSuccessResponse({ blacklisted });
+            return {
+                statusCode: 200,
+                body: JSON.stringify({ blacklisted })
+            };
         }
 
-        if (req.method === 'POST') {
-            const { email } = req.body;
+        if (event.httpMethod === 'POST') {
+            const { email } = JSON.parse(event.body);
             
             if (!email) {
-                return authHelper.createErrorResponse('Email is required', 400);
+                return {
+                    statusCode: 400,
+                    body: JSON.stringify({ error: 'Email is required' })
+                };
             }
 
-            if (!authHelper.isValidEmail(email)) {
-                return authHelper.createErrorResponse('Invalid email format', 400);
+            if (!isValidEmail(email)) {
+                return {
+                    statusCode: 400,
+                    body: JSON.stringify({ error: 'Invalid email format' })
+                };
             }
 
             // Prevent admin from blacklisting themselves
-            if (email === user.email) {
-                return authHelper.createErrorResponse('Cannot blacklist your own admin account', 403);
+            if (email === userEmail) {
+                return {
+                    statusCode: 403,
+                    body: JSON.stringify({ error: 'Cannot blacklist your own admin account' })
+                };
             }
 
             const added = await database.addToBlacklist(email);
             
             if (added) {
-                console.log(`UeH Garage: User ${email} blacklisted by admin ${user.email}`);
-                context.res = authHelper.createSuccessResponse({
-                    message: `User ${email} blacklisted successfully`
-                });
+                console.log(`UeH Garage: User ${email} blacklisted by admin ${userEmail}`);
+                return {
+                    statusCode: 200,
+                    body: JSON.stringify({
+                        success: true,
+                        message: `User ${email} blacklisted successfully`
+                    })
+                };
             } else {
-                context.res = authHelper.createErrorResponse('User already blacklisted', 409);
+                return {
+                    statusCode: 409,
+                    body: JSON.stringify({ error: 'User already blacklisted' })
+                };
             }
         }
 
-        if (req.method === 'DELETE') {
-            const { email } = req.body;
+        if (event.httpMethod === 'DELETE') {
+            const { email } = JSON.parse(event.body);
             
             if (!email) {
-                return authHelper.createErrorResponse('Email is required', 400);
+                return {
+                    statusCode: 400,
+                    body: JSON.stringify({ error: 'Email is required' })
+                };
             }
 
-            if (!authHelper.isValidEmail(email)) {
-                return authHelper.createErrorResponse('Invalid email format', 400);
+            if (!isValidEmail(email)) {
+                return {
+                    statusCode: 400,
+                    body: JSON.stringify({ error: 'Invalid email format' })
+                };
             }
 
             const removed = await database.removeFromBlacklist(email);
             
             if (removed) {
-                console.log(`UeH Garage: User ${email} removed from blacklist by admin ${user.email}`);
-                context.res = authHelper.createSuccessResponse({
-                    message: `User ${email} removed from blacklist successfully`
-                });
+                console.log(`UeH Garage: User ${email} removed from blacklist by admin ${userEmail}`);
+                return {
+                    statusCode: 200,
+                    body: JSON.stringify({
+                        success: true,
+                        message: `User ${email} removed from blacklist successfully`
+                    })
+                };
             } else {
-                context.res = authHelper.createErrorResponse('User not found in blacklist', 404);
+                return {
+                    statusCode: 404,
+                    body: JSON.stringify({ error: 'User not found in blacklist' })
+                };
             }
         }
 
+        return {
+            statusCode: 405,
+            body: JSON.stringify({ error: 'Method not allowed' })
+        };
+
     } catch (error) {
         console.error('Blacklist management error:', error);
-        context.res = authHelper.createErrorResponse('Internal server error', 500);
+        return {
+            statusCode: 500,
+            body: JSON.stringify({ error: 'Internal server error' })
+        };
     }
 };
