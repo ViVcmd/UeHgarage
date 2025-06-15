@@ -1,1 +1,23 @@
-// <NPM dependencies and scripts>
+{
+  "name": "ueh-garage",
+  "version": "1.0.0",
+  "description": "UeH Garage - Production-ready secure garage control system",
+  "main": "index.js",
+  "scripts": {
+    "start": "func start",
+    "build": "echo 'Static site - no build required'"
+  },
+  "dependencies": {
+    "@azure/functions": "^4.0.0",
+    "@azure/data-tables": "^13.2.2",
+    "@azure/cosmos": "^4.0.0",
+    "axios": "^1.6.0",
+    "jsonwebtoken": "^9.0.0",
+    "crypto": "^1.0.1",
+    "bcryptjs": "^2.4.3",
+    "rate-limiter-flexible": "^3.0.8"
+  },
+  "devDependencies": {
+    "@azure/static-web-apps-cli": "^1.1.0"
+  }
+}
