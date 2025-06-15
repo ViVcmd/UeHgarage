@@ -11,6 +11,10 @@
     "@neondatabase/serverless": "^0.6.0",
     "axios": "^1.6.0",
     "lodash": "^4.17.21"
+    "pg": "^8.11.3",
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.0.2",
+    "@azure/data-tables": "^13.2.2"
   },
   "devDependencies": {
     "netlify-cli": "^17.0.0"
