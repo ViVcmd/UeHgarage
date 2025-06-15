@@ -1,9 +1,8 @@
-const database = require('../utils/database');
-const authHelper = require('../utils/auth-helper');
-const crypto = require('crypto');
+
+const database = require('./utils/database');
 
 function generateAccessCode() {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
     let result = '';
     
     // Generate 3 groups of 4 characters each
@@ -19,47 +18,71 @@ function generateAccessCode() {
     return result; // Format: XXXX-XXXX-XXXX
 }
 
-module.exports = async function (context, req) {
+function isValidEmail(email) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+}
+
+exports.handler = async (event, context) => {
+    if (event.httpMethod !== 'POST') {
+        return {
+            statusCode: 405,
+            body: JSON.stringify({ error: 'Method not allowed' })
+        };
+    }
+
     try {
-        // Check authentication
-        const user = authHelper.getUserFromRequest(req);
-        if (!user) {
-            return authHelper.createErrorResponse('Not authenticated', 401);
-        }
-
         // Check if admin
-        if (!authHelper.isAdmin(req)) {
-            await authHelper.logSecurityEvent('Non-admin code generation attempt', { 
-                email: user.email 
-            }, req);
-            return authHelper.createErrorResponse('Admin access required', 403);
+        const userEmail = event.headers['x-user-email'];
+        const adminEmail = process.env.ADMIN_EMAIL;
+        
+        if (userEmail !== adminEmail) {
+            return {
+                statusCode: 403,
+                body: JSON.stringify({ error: 'Admin access required' })
+            };
         }
 
-        const { email, expiresInHours = 24 } = req.body;
+        const { email, expiresInHours = 24 } = JSON.parse(event.body);
         
         if (!email) {
-            return authHelper.createErrorResponse('Email is required', 400);
+            return {
+                statusCode: 400,
+                body: JSON.stringify({ error: 'Email is required' })
+            };
         }
 
-        if (!authHelper.isValidEmail(email)) {
-            return authHelper.createErrorResponse('Invalid email format', 400);
+        if (!isValidEmail(email)) {
+            return {
+                statusCode: 400,
+                body: JSON.stringify({ error: 'Invalid email format' })
+            };
         }
 
         // Validate expiration hours
         if (typeof expiresInHours !== 'number' || expiresInHours < 1 || expiresInHours > 168) {
-            return authHelper.createErrorResponse('expiresInHours must be between 1 and 168 (1 week)', 400);
+            return {
+                statusCode: 400,
+                body: JSON.stringify({ error: 'expiresInHours must be between 1 and 168 (1 week)' })
+            };
         }
 
         // Check if user is whitelisted
         const isWhitelisted = await database.isWhitelisted(email);
         if (!isWhitelisted) {
-            return authHelper.createErrorResponse('User is not whitelisted', 400);
+            return {
+                statusCode: 400,
+                body: JSON.stringify({ error: 'User is not whitelisted' })
+            };
         }
 
         // Check if user already has an active code
         const hasActiveCode = await database.hasActiveCode(email);
         if (hasActiveCode) {
-            return authHelper.createErrorResponse('User already has an active access code', 409);
+            return {
+                statusCode: 409,
+                body: JSON.stringify({ error: 'User already has an active access code' })
+            };
         }
 
         const code = generateAccessCode();
@@ -67,17 +90,24 @@ module.exports = async function (context, req) {
         
         await database.setCode(email, code, expiresAt);
         
-        console.log(`UeH Garage: Access code generated for ${email} by admin ${user.email}`);
+        console.log(`UeH Garage: Access code generated for ${email} by admin ${userEmail}`);
 
-        context.res = authHelper.createSuccessResponse({
-            message: `Access code generated for ${email}`,
-            code: code,
-            expiresAt: expiresAt.toISOString(),
-            expiresInHours: expiresInHours
-        });
+        return {
+            statusCode: 200,
+            body: JSON.stringify({
+                success: true,
+                message: `Access code generated for ${email}`,
+                code: code,
+                expiresAt: expiresAt.toISOString(),
+                expiresInHours: expiresInHours
+            })
+        };
 
     } catch (error) {
         console.error('Code generation error:', error);
-        context.res = authHelper.createErrorResponse('Internal server error', 500);
+        return {
+            statusCode: 500,
+            body: JSON.stringify({ error: 'Internal server error' })
+        };
     }
 };
