@@ -1,6 +1,4 @@
-// Distance calculation utility with enhanced error handling
 function calculateDistance(lat1, lng1, lat2, lng2) {
-    // Validate inputs
     if (!isValidCoordinate(lat1, lng1) || !isValidCoordinate(lat2, lng2)) {
         throw new Error('Invalid coordinates provided');
     }
@@ -29,42 +27,6 @@ function isValidCoordinate(lat, lng) {
     );
 }
 
-function isWithinRange(userLat, userLng, targetLat, targetLng, maxDistance) {
-    try {
-        const distance = calculateDistance(userLat, userLng, targetLat, targetLng);
-        
-        return {
-            allowed: distance <= maxDistance,
-            distance: distance,
-            maxDistance: maxDistance,
-            accuracy: 'high'
-        };
-    } catch (error) {
-        console.error('Location calculation error:', error);
-        return {
-            allowed: false,
-            distance: null,
-            maxDistance: maxDistance,
-            accuracy: 'error',
-            error: error.message
-        };
-    }
-}
-
-// Get location bounds for a given point and radius
-function getLocationBounds(centerLat, centerLng, radiusMeters) {
-    const latDelta = radiusMeters / 111000; // Approximate meters per degree latitude
-    const lngDelta = radiusMeters / (111000 * Math.cos(centerLat * Math.PI / 180));
-    
-    return {
-        north: centerLat + latDelta,
-        south: centerLat - latDelta,
-        east: centerLng + lngDelta,
-        west: centerLng - lngDelta
-    };
-}
-
-// Check if coordinates are within Switzerland (additional security)
 function isInSwitzerland(lat, lng) {
     // Approximate bounds of Switzerland
     const bounds = {
@@ -83,7 +45,5 @@ function isInSwitzerland(lat, lng) {
 module.exports = {
     calculateDistance,
     isValidCoordinate,
-    isWithinRange,
-    getLocationBounds,
     isInSwitzerland
 };
