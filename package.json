@@ -4,16 +4,12 @@
   "description": "UeH Garage - Production-ready secure garage control system",
   "main": "index.js",
   "scripts": {
-    "start": "func start",
+    "start": "netlify dev",
     "build": "echo 'Static site - no build required'"
   },
   "dependencies": {
     "@neondatabase/serverless": "^0.6.0",
-    "axios": "^1.6.0"
-    "jsonwebtoken": "^9.0.0",
-    "crypto": "^1.0.1",
-    "bcryptjs": "^2.4.3",
-    "rate-limiter-flexible": "^7.1.1"
+    "axios": "^1.6.0",
     "lodash": "^4.17.21"
   },
   "devDependencies": {
