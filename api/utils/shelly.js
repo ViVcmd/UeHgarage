@@ -5,9 +5,9 @@ class UeHGarageShellyController {
         this.deviceId = process.env.SHELLY_DEVICE_ID;
         this.authKey = process.env.SHELLY_AUTH_KEY;
         this.baseUrl = 'https://shelly-165-eu.shelly.cloud';
-        this.timeout = 15000; // 15 seconds timeout
+        this.timeout = 15000;
         this.retryAttempts = 3;
-        this.retryDelay = 2000; // 2 seconds between retries
+        this.retryDelay = 2000;
     }
 
     async makeRequest(endpoint, method = 'GET', data = null) {
@@ -50,7 +50,6 @@ class UeHGarageShellyController {
                     };
                 }
                 
-                // Wait before retry
                 await new Promise(resolve => setTimeout(resolve, this.retryDelay * attempt));
             }
         }
@@ -103,7 +102,6 @@ class UeHGarageShellyController {
         if (result.success) {
             console.log('UeH Garage: Status retrieved successfully');
             
-            // Parse the status to determine garage state
             const relays = result.data.data?.device_status?.relays || [];
             const isOpen = relays.length > 0 ? relays[0].ison : false;
             
@@ -123,7 +121,6 @@ class UeHGarageShellyController {
     async openGarage() {
         console.log('UeH Garage: Opening garage door');
         
-        // First check current status
         const statusResult = await this.getStatus();
         if (statusResult.success && statusResult.isOpen) {
             console.log('UeH Garage: Garage is already open');
@@ -134,11 +131,9 @@ class UeHGarageShellyController {
             };
         }
 
-        // Send open command
         const result = await this.sendCommand('on');
         
         if (result.success) {
-            // Wait a moment and verify the command worked
             await new Promise(resolve => setTimeout(resolve, 2000));
             
             const verifyResult = await this.getStatus();
@@ -155,57 +150,6 @@ class UeHGarageShellyController {
         return result;
     }
 
-    async closeGarage() {
-        console.log('UeH Garage: Closing garage door');
-        
-        // First check current status
-        const statusResult = await this.getStatus();
-        if (statusResult.success && !statusResult.isOpen) {
-            console.log('UeH Garage: Garage is already closed');
-            return {
-                success: true,
-                message: 'Garage is already closed',
-                alreadyClosed: true
-            };
-        }
-
-        // Send close command
-        const result = await this.sendCommand('off');
-        
-        if (result.success) {
-            // Wait a moment and verify the command worked
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            
-            const verifyResult = await this.getStatus();
-            if (verifyResult.success) {
-                return {
-                    success: true,
-                    message: 'Garage closed successfully',
-                    verified: !verifyResult.isOpen,
-                    status: verifyResult.status
-                };
-            }
-        }
-
-        return result;
-    }
-
-    async toggleGarage() {
-        console.log('UeH Garage: Toggling garage door');
-        
-        const statusResult = await this.getStatus();
-        if (!statusResult.success) {
-            return statusResult;
-        }
-
-        if (statusResult.isOpen) {
-            return await this.closeGarage();
-        } else {
-            return await this.openGarage();
-        }
-    }
-
-    // Health check for the Shelly device
     async healthCheck() {
         console.log('UeH Garage: Performing Shelly device health check');
         
