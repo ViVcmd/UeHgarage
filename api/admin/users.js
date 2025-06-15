@@ -1,80 +1,122 @@
-const database = require('../utils/database');
-const authHelper = require('../utils/auth-helper');
 
-module.exports = async function (context, req) {
+const database = require('./utils/database');
+
+function isValidEmail(email) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+}
+
+exports.handler = async (event, context) => {
     try {
-        // Check authentication
-        const user = authHelper.getUserFromRequest(req);
-        if (!user) {
-            return authHelper.createErrorResponse('Not authenticated', 401);
-        }
-
         // Check if admin
-        if (!authHelper.isAdmin(req)) {
-            await authHelper.logSecurityEvent('Non-admin user management access attempt', { 
-                email: user.email 
-            }, req);
-            return authHelper.createErrorResponse('Admin access required', 403);
+        const userEmail = event.headers['x-user-email'];
+        const adminEmail = process.env.ADMIN_EMAIL;
+        
+        if (userEmail !== adminEmail) {
+            return {
+                statusCode: 403,
+                body: JSON.stringify({ error: 'Admin access required' })
+            };
         }
 
-        if (req.method === 'GET') {
+        if (event.httpMethod === 'GET') {
             const users = await database.getUsers();
-            context.res = authHelper.createSuccessResponse({ users });
+            return {
+                statusCode: 200,
+                body: JSON.stringify({ users })
+            };
         }
 
-        if (req.method === 'POST') {
-            const { email } = req.body;
+        if (event.httpMethod === 'POST') {
+            const { email } = JSON.parse(event.body);
             
             if (!email) {
-                return authHelper.createErrorResponse('Email is required', 400);
+                return {
+                    statusCode: 400,
+                    body: JSON.stringify({ error: 'Email is required' })
+                };
             }
 
-            if (!authHelper.isValidEmail(email)) {
-                return authHelper.createErrorResponse('Invalid email format', 400);
+            if (!isValidEmail(email)) {
+                return {
+                    statusCode: 400,
+                    body: JSON.stringify({ error: 'Invalid email format' })
+                };
             }
 
             const added = await database.addUser(email);
             
             if (added) {
-                console.log(`UeH Garage: User ${email} added by admin ${user.email}`);
-                context.res = authHelper.createSuccessResponse({
-                    message: `User ${email} added successfully`
-                });
+                console.log(`UeH Garage: User ${email} added by admin ${userEmail}`);
+                return {
+                    statusCode: 200,
+                    body: JSON.stringify({
+                        success: true,
+                        message: `User ${email} added successfully`
+                    })
+                };
             } else {
-                context.res = authHelper.createErrorResponse('User already exists', 409);
+                return {
+                    statusCode: 409,
+                    body: JSON.stringify({ error: 'User already exists' })
+                };
             }
         }
 
-        if (req.method === 'DELETE') {
-            const { email } = req.body;
+        if (event.httpMethod === 'DELETE') {
+            const { email } = JSON.parse(event.body);
             
             if (!email) {
-                return authHelper.createErrorResponse('Email is required', 400);
+                return {
+                    statusCode: 400,
+                    body: JSON.stringify({ error: 'Email is required' })
+                };
             }
 
-            if (!authHelper.isValidEmail(email)) {
-                return authHelper.createErrorResponse('Invalid email format', 400);
+            if (!isValidEmail(email)) {
+                return {
+                    statusCode: 400,
+                    body: JSON.stringify({ error: 'Invalid email format' })
+                };
             }
 
             // Prevent admin from removing themselves
-            if (email === user.email) {
-                return authHelper.createErrorResponse('Cannot remove your own admin account', 403);
+            if (email === userEmail) {
+                return {
+                    statusCode: 403,
+                    body: JSON.stringify({ error: 'Cannot remove your own admin account' })
+                };
             }
 
             const removed = await database.removeUser(email);
             
             if (removed) {
-                console.log(`UeH Garage: User ${email} removed by admin ${user.email}`);
-                context.res = authHelper.createSuccessResponse({
-                    message: `User ${email} removed successfully`
-                });
+                console.log(`UeH Garage: User ${email} removed by admin ${userEmail}`);
+                return {
+                    statusCode: 200,
+                    body: JSON.stringify({
+                        success: true,
+                        message: `User ${email} removed successfully`
+                    })
+                };
             } else {
-                context.res = authHelper.createErrorResponse('User not found', 404);
+                return {
+                    statusCode: 404,
+                    body: JSON.stringify({ error: 'User not found' })
+                };
             }
         }
 
+        return {
+            statusCode: 405,
+            body: JSON.stringify({ error: 'Method not allowed' })
+        };
+
     } catch (error) {
         console.error('User management error:', error);
-        context.res = authHelper.createErrorResponse('Internal server error', 500);
+        return {
+            statusCode: 500,
+            body: JSON.stringify({ error: 'Internal server error' })
+        };
     }
 };
