@@ -1,1 +1,95 @@
-// <HTML content>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UeH Garage Control</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <meta name="description" content="UeH Garage control panel">
+    <meta name="robots" content="noindex, nofollow">
+</head>
+<body>
+    <div class="container">
+        <div class="garage-card">
+            <div class="header-section">
+                <h1>🏠 UeH Garage Control</h1>
+                <p class="subtitle">Secure Remote Access</p>
+            </div>
+            
+            <div id="user-info">
+                <p>Welcome to UeH Garage, <span id="user-email"></span></p>
+                <div class="user-actions">
+                    <button id="refresh-btn" class="secondary-btn">🔄 Refresh</button>
+                    <button id="logout-btn" class="secondary-btn">🚪 Logout</button>
+                </div>
+            </div>
+
+            <div id="loading-section" class="loading-section">
+                <div class="spinner"></div>
+                <p id="loading-message">Initializing system...</p>
+            </div>
+
+            <div id="location-check" style="display: none;">
+                <div class="status-card">
+                    <h3>📍 Location Verification</h3>
+                    <p>Checking your location for UeH Garage access...</p>
+                    <div class="progress-bar">
+                        <div class="progress-fill"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="garage-controls" style="display: none;">
+                <div class="status-display">
+                    <h2 id="garage-status">🚗 UeH Garage Status: <span class="status-text">Unknown</span></h2>
+                    <div class="status-indicator">
+                        <div id="status-light" class="status-light unknown"></div>
+                        <span id="status-label">Checking...</span>
+                    </div>
+                </div>
+                
+                <div class="control-section">
+                    <button id="open-garage-btn" class="primary-btn garage-btn">
+                        <span class="btn-icon">🔓</span>
+                        <span class="btn-text">Open UeH Garage</span>
+                        <span class="btn-loading" style="display: none;">Opening...</span>
+                    </button>
+                    
+                    <div class="last-action">
+                        <p id="last-action-text">Ready to operate</p>
+                        <p id="distance-info"></p>
+                    </div>
+                </div>
+                
+                <div class="options">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="stay-signed-in">
+                        <span class="checkmark"></span>
+                        Stay signed in to UeH Garage
+                    </label>
+                </div>
+            </div>
+
+            <div id="location-denied" style="display: none;">
+                <div class="error-card">
+                    <h2>🚫 Access Denied</h2>
+                    <p id="distance-message"></p>
+                    <p>You must be within the allowed range to control UeH Garage.</p>
+                    <button id="retry-location-btn" class="primary-btn">📍 Retry Location Check</button>
+                </div>
+            </div>
+
+            <div id="error-section" style="display: none;">
+                <div class="error-card">
+                    <h2>⚠️ System Error</h2>
+                    <p id="error-details">An unexpected error occurred.</p>
+                    <button id="retry-btn" class="primary-btn">🔄 Retry</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/garage.js"></script>
+</body>
+</html>

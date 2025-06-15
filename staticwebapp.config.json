@@ -1,1 +1,70 @@
-// <Routing & security rules>
+{
+  "routes": [
+    {
+      "route": "/login",
+      "redirect": "/.auth/login/google",
+      "statusCode": 302,
+      "allowedRoles": ["anonymous"]
+    },
+    {
+      "route": "/logout",
+      "redirect": "/.auth/logout",
+      "statusCode": 302,
+      "allowedRoles": ["authenticated"]
+    },
+    {
+      "route": "/dashboard",
+      "rewrite": "/garage.html",
+      "allowedRoles": ["authenticated"]
+    },
+    {
+      "route": "/control",
+      "rewrite": "/garage.html",
+      "allowedRoles": ["authenticated"]
+    },
+    {
+      "route": "/admin",
+      "rewrite": "/admin.html",
+      "allowedRoles": ["authenticated"]
+    },
+    {
+      "route": "/manage",
+      "rewrite": "/admin.html",
+      "allowedRoles": ["authenticated"]
+    },
+    {
+      "route": "/admin.html",
+      "allowedRoles": ["authenticated"]
+    },
+    {
+      "route": "/garage.html",
+      "allowedRoles": ["authenticated"]
+    },
+    {
+      "route": "/api/*",
+      "allowedRoles": ["authenticated"]
+    }
+  ],
+  "responseOverrides": {
+    "401": {
+      "redirect": "/index.html",
+      "statusCode": 302
+    },
+    "403": {
+      "redirect": "/index.html",
+      "statusCode": 302
+    }
+  },
+  "navigationFallback": {
+    "rewrite": "/index.html",
+    "exclude": ["/images/*.{png,jpg,gif,ico}", "/*.{css,scss,js}", "/api/*"]
+  },
+  "globalHeaders": {
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "X-XSS-Protection": "1; mode=block",
+    "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
+    "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' *.shelly.cloud; img-src 'self' data:; font-src 'self'",
+    "Referrer-Policy": "strict-origin-when-cross-origin"
+  }
+}

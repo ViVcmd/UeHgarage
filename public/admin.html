@@ -1,1 +1,137 @@
-// <HTML content>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UeH Garage Admin Panel</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <meta name="description" content="UeH Garage administration panel">
+    <meta name="robots" content="noindex, nofollow">
+</head>
+<body>
+    <div class="container">
+        <div class="admin-card">
+            <div class="header-section">
+                <h1>⚙️ UeH Garage Admin Panel</h1>
+                <p class="subtitle">System Administration</p>
+            </div>
+            
+            <div class="admin-header">
+                <div class="admin-info">
+                    <p>Welcome, UeH Garage Administrator</p>
+                    <p class="session-info">Session: <span id="session-time">Active</span></p>
+                </div>
+                <button id="admin-logout-btn" class="secondary-btn">🚪 Logout</button>
+            </div>
+
+            <div id="loading-admin" class="loading-section">
+                <div class="spinner"></div>
+                <p>Loading admin panel...</p>
+            </div>
+
+            <div id="admin-content" style="display: none;">
+                <div class="admin-sections">
+                    <!-- System Status -->
+                    <div class="admin-section">
+                        <h2>📊 System Status</h2>
+                        <div class="status-grid">
+                            <div class="status-item">
+                                <span class="status-label">System Health:</span>
+                                <span id="system-health" class="status-value">Checking...</span>
+                            </div>
+                            <div class="status-item">
+                                <span class="status-label">Active Users:</span>
+                                <span id="active-users" class="status-value">0</span>
+                            </div>
+                            <div class="status-item">
+                                <span class="status-label">Garage Status:</span>
+                                <span id="admin-garage-status" class="status-value">Unknown</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Maintenance Mode -->
+                    <div class="admin-section">
+                        <h2>🔧 UeH Garage System Control</h2>
+                        <div class="maintenance-control">
+                            <label class="toggle-label">
+                                <input type="checkbox" id="maintenance-mode">
+                                <span class="toggle-slider"></span>
+                                Maintenance Mode
+                            </label>
+                            <button id="save-maintenance" class="primary-btn">💾 Save Changes</button>
+                        </div>
+                        <p class="help-text">Enable maintenance mode to prevent user access during system updates.</p>
+                    </div>
+
+                    <!-- User Management -->
+                    <div class="admin-section">
+                        <h2>👥 UeH Garage User Management</h2>
+                        
+                        <div class="add-user">
+                            <h3>Add New User</h3>
+                            <div class="input-group">
+                                <input type="email" id="new-user-email" placeholder="Email address" required>
+                                <button id="add-user-btn" class="primary-btn">➕ Add User</button>
+                            </div>
+                        </div>
+
+                        <div class="user-list">
+                            <h3>Registered UeH Garage Users (<span id="user-count">0</span>)</h3>
+                            <div class="search-box">
+                                <input type="text" id="user-search" placeholder="🔍 Search users...">
+                            </div>
+                            <div id="users-container" class="users-grid">
+                                <!-- Users will be loaded here -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Code Management -->
+                    <div class="admin-section">
+                        <h2>🔑 Access Code Management</h2>
+                        <div class="code-stats">
+                            <div class="stat-item">
+                                <span class="stat-number" id="active-codes">0</span>
+                                <span class="stat-label">Active Codes</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-number" id="expired-codes">0</span>
+                                <span class="stat-label">Expired Codes</span>
+                            </div>
+                        </div>
+                        <button id="cleanup-codes-btn" class="secondary-btn">🧹 Cleanup Expired Codes</button>
+                    </div>
+
+                    <!-- Blacklist Management -->
+                    <div class="admin-section">
+                        <h2>🚫 UeH Garage Blacklist Management</h2>
+                        <div class="blacklist-control">
+                            <div class="input-group">
+                                <input type="email" id="blacklist-email" placeholder="Email to blacklist" required>
+                                <button id="blacklist-btn" class="danger-btn">🚫 Blacklist</button>
+                            </div>
+                        </div>
+                        
+                        <div id="blacklisted-users" class="blacklist-grid">
+                            <!-- Blacklisted users will be loaded here -->
+                        </div>
+                    </div>
+
+                    <!-- Activity Log -->
+                    <div class="admin-section">
+                        <h2>📋 Recent Activity</h2>
+                        <div id="activity-log" class="activity-log">
+                            <!-- Activity will be loaded here -->
+                        </div>
+                        <button id="refresh-log-btn" class="secondary-btn">🔄 Refresh Log</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/admin.js"></script>
+</body>
+</html>

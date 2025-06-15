@@ -1,1 +1,79 @@
-// <HTML content>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UeH Garage - Secure Access Control</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <meta name="description" content="UeH Garage secure access control system">
+    <meta name="robots" content="noindex, nofollow">
+</head>
+<body>
+    <div class="container">
+        <div class="login-card">
+            <div class="logo-section">
+                <h1>UeH Garage</h1>
+                <p class="subtitle">Secure Garage Access Control</p>
+            </div>
+            
+            <div id="maintenance-notice" class="maintenance-notice" style="display: none;">
+                <h2>🔧 System Under Maintenance</h2>
+                <p>UeH Garage is currently under maintenance. Please try again later.</p>
+            </div>
+
+            <div id="error-notice" class="error-notice" style="display: none;">
+                <h2>⚠️ System Error</h2>
+                <p id="error-message">An error occurred. Please try again.</p>
+            </div>
+
+            <div id="login-section">
+                <div class="login-options">
+                    <h2>Sign In to UeH Garage</h2>
+                    
+                    <!-- Google OAuth via Azure -->
+                    <div class="oauth-section">
+                        <button id="google-login-btn" class="primary-btn" disabled>
+                            <span class="btn-text">Sign in with Google</span>
+                            <span class="btn-loading" style="display: none;">Loading...</span>
+                        </button>
+                    </div>
+
+                    <!-- Admin Login -->
+                    <div class="admin-section">
+                        <h3>Administrator Access</h3>
+                        <form id="admin-form">
+                            <input type="email" id="admin-email" placeholder="Admin Email" required autocomplete="username">
+                            <input type="password" id="admin-code" placeholder="Admin Code" required autocomplete="current-password">
+                            <button type="submit" class="primary-btn">
+                                <span class="btn-text">Admin Sign In</span>
+                                <span class="btn-loading" style="display: none;">Signing in...</span>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- One-time Code Entry -->
+                <div id="code-section" style="display: none;">
+                    <h3>Enter Your UeH Garage Access Code</h3>
+                    <p class="code-instructions">Enter the 12-character code provided by your administrator</p>
+                    <form id="code-form">
+                        <input type="text" id="access-code" placeholder="XXXX-XXXX-XXXX" maxlength="14" required autocomplete="off" spellcheck="false">
+                        <button type="submit" class="primary-btn">
+                            <span class="btn-text">Verify Code</span>
+                            <span class="btn-loading" style="display: none;">Verifying...</span>
+                        </button>
+                        <button type="button" id="back-to-login" class="secondary-btn">Back to Login</button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="footer">
+                <p>&copy; 2025 UeH Garage. All rights reserved.</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/auth.js"></script>
+</body>
+</html>
