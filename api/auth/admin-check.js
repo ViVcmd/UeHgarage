@@ -1,21 +1,35 @@
-const authHelper = require('../utils/auth-helper');
+exports.handler = async (event, context) => {
+    if (event.httpMethod !== 'POST') {
+        return {
+            statusCode: 405,
+            body: JSON.stringify({ error: 'Method not allowed' })
+        };
+    }
 
-module.exports = async function (context, req) {
     try {
-        const { email } = req.body;
+        const { email } = JSON.parse(event.body);
         
         if (!email) {
-            return authHelper.createErrorResponse('Email is required', 400);
+            return {
+                statusCode: 400,
+                body: JSON.stringify({ error: 'Email is required' })
+            };
         }
 
         const adminEmail = process.env.ADMIN_EMAIL;
         
-        context.res = authHelper.createSuccessResponse({
-            isAdmin: email === adminEmail
-        });
+        return {
+            statusCode: 200,
+            body: JSON.stringify({
+                isAdmin: email === adminEmail
+            })
+        };
 
     } catch (error) {
         console.error('Admin check error:', error);
-        context.res = authHelper.createErrorResponse('Internal server error', 500);
+        return {
+            statusCode: 500,
+            body: JSON.stringify({ error: 'Internal server error' })
+        };
     }
 };
