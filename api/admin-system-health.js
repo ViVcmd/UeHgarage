@@ -1,5 +1,5 @@
-const database = require('../utils/database');
-const authHelper = require('../utils/auth-helper');
+const database = require('./utils/database');
+const authHelper = require('./utils/auth-helper');
 
 module.exports = async function (context, req) {
     try {
