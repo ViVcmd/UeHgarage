@@ -7,20 +7,19 @@ class AuthHelper {
         this.adminEmail = process.env.ADMIN_EMAIL;
     }
 
-    // Extract user from Azure Static Web Apps authentication
-    getUserFromRequest(req) {
+    // Get user from Netlify (simplified - you'll need to implement based on your auth method)
+    getUserFromRequest(event) {
         try {
-            const userHeader = req.headers['x-ms-client-principal'];
-            if (!userHeader) {
+            // For Netlify, you'll get user email from headers you set
+            const userEmail = event.headers['x-user-email'];
+            if (!userEmail) {
                 return null;
             }
 
-            const userInfo = JSON.parse(Buffer.from(userHeader, 'base64').toString());
             return {
-                email: userInfo.userDetails,
-                provider: userInfo.identityProvider,
-                userId: userInfo.userId,
-                claims: userInfo.claims || []
+                email: userEmail,
+                provider: 'netlify',
+                userId: userEmail
             };
         } catch (error) {
             console.error('Error parsing user from request:', error);
@@ -29,19 +28,19 @@ class AuthHelper {
     }
 
     // Check if user is authenticated
-    isAuthenticated(req) {
-        return this.getUserFromRequest(req) !== null;
+    isAuthenticated(event) {
+        return this.getUserFromRequest(event) !== null;
     }
 
     // Check if user is admin
-    isAdmin(req) {
-        const user = this.getUserFromRequest(req);
+    isAdmin(event) {
+        const user = this.getUserFromRequest(event);
         return user && user.email === this.adminEmail;
     }
 
     // Check if user is authorized (whitelisted and not blacklisted)
-    async isAuthorized(req) {
-        const user = this.getUserFromRequest(req);
+    async isAuthorized(event) {
+        const user = this.getUserFromRequest(event);
         if (!user) {
             return false;
         }
@@ -90,38 +89,36 @@ class AuthHelper {
     // Create error response
     createErrorResponse(message, statusCode = 400) {
         return {
-            status: statusCode,
-            body: {
+            statusCode,
+            body: JSON.stringify({
                 error: message,
                 timestamp: new Date().toISOString()
-            }
+            })
         };
     }
 
     // Create success response
     createSuccessResponse(data = {}, statusCode = 200) {
         return {
-            status: statusCode,
-            body: {
+            statusCode,
+            body: JSON.stringify({
                 success: true,
                 timestamp: new Date().toISOString(),
                 ...data
-            }
+            })
         };
     }
 
-    // Rate limiting helper
+    // Rate limiting helper (simplified for Netlify)
     async checkRateLimit(identifier, maxAttempts = 5, windowMinutes = 15) {
-        // This would typically use Redis or another cache
-        // For now, we'll use a simple in-memory approach
-        const key = `rate_limit_${identifier}`;
-        const now = Date.now();
-        const windowMs = windowMinutes * 60 * 1000;
-
-        // In a production environment, you'd want to use Redis or similar
+        // Simple in-memory rate limiting (in production, use external storage)
         if (!this.rateLimitStore) {
             this.rateLimitStore = new Map();
         }
+
+        const key = `rate_limit_${identifier}`;
+        const now = Date.now();
+        const windowMs = windowMinutes * 60 * 1000;
 
         const attempts = this.rateLimitStore.get(key) || [];
         const validAttempts = attempts.filter(time => now - time < windowMs);
@@ -145,15 +142,12 @@ class AuthHelper {
     }
 
     // Log security event
-    async logSecurityEvent(event, details, req) {
+    async logSecurityEvent(event, details, userEmail = null, ipAddress = null) {
         try {
-            const user = this.getUserFromRequest(req);
-            const ip = req.headers['x-forwarded-for'] || req.connection?.remoteAddress || 'unknown';
-            
             await database.logActivity(
                 `Security: ${event}`,
-                JSON.stringify({ ...details, ip }),
-                user?.email || 'anonymous'
+                JSON.stringify({ ...details, ip: ipAddress }),
+                userEmail || 'anonymous'
             );
         } catch (error) {
             console.error('Error logging security event:', error);
