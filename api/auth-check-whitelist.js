@@ -1,4 +1,4 @@
-const database = require('../utils/database');
+const database = require('./utils/database');
 
 module.exports = async function (context, req) {
     try {
