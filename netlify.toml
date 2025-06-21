@@ -5,12 +5,6 @@
 [build.environment]
   NODE_VERSION = "18"
 
-# SPA fallback for client-side routing
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
-
 # Security headers
 [[headers]]
   for = "/*"
@@ -37,10 +31,17 @@
   [headers.values]
     Cache-Control = "public, max-age=31536000"
 
-# API headers
+# API headers with CORS
 [[headers]]
   for = "/api/*"
   [headers.values]
     Access-Control-Allow-Origin = "*"
     Access-Control-Allow-Methods = "GET, POST, PUT, DELETE, OPTIONS"
     Access-Control-Allow-Headers = "Content-Type, Authorization, x-user-email"
+
+# CRITICAL: SPA fallback for everything EXCEPT /api/* routes
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+  conditions = {Path = ["!api/*"]}
