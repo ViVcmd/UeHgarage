@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Authentication Success - UeH Garage</title>
+    <link rel="stylesheet" href="../css/styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="login-card">
+            <div class="logo-section">
+                <h1>🏠 UeH Garage</h1>
+                <p class="subtitle">Authentication Successful</p>
+            </div>
+            
+            <div id="success-content">
+                <h2>Welcome!</h2>
+                <p>You have successfully signed in with Google.</p>
+                <div class="loading-section">
+                    <div class="spinner"></div>
+                    <p>Redirecting you to UeH Garage...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        window.addEventListener('load', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const token = urlParams.get('token');
+            const email = urlParams.get('email');
+            
+            if (token && email) {
+                // Store user info
+                localStorage.setItem('ueh_garage_user_email', email);
+                localStorage.setItem('ueh_garage_jwt_token', token);
+                
+                // Check if admin and redirect
+                setTimeout(async () => {
+                    try {
+                        const response = await fetch('/api/auth/admin-check', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ email })
+                        });
+                        
+                        const data = await response.json();
+                        
+                        if (data.isAdmin) {
+                            window.location.href = '/admin.html';
+                        } else {
+                            window.location.href = '/garage.html';
+                        }
+                    } catch (error) {
+                        console.error('Admin check failed:', error);
+                        window.location.href = '/garage.html';
+                    }
+                }, 2000);
+            } else {
+                window.location.href = '/index.html?error=missing_data';
+            }
+        });
+    </script>
+</body>
+</html>
