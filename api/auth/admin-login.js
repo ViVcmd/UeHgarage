@@ -1,5 +1,3 @@
-const database = require('../utils/database');
-
 exports.handler = async (event, context) => {
     if (event.httpMethod !== 'POST') {
         return {
@@ -18,20 +16,11 @@ exports.handler = async (event, context) => {
             };
         }
 
+        // Direct environment variable check - no auth helper needed
         const adminEmail = process.env.ADMIN_EMAIL;
         const adminCode = process.env.ADMIN_CODE;
         
-        const ipAddress = event.headers['x-forwarded-for'] || event.headers['x-real-ip'];
-        const userAgent = event.headers['user-agent'];
-        
         if (email === adminEmail && code === adminCode) {
-            // Log successful login if database is available
-            try {
-                await database.logActivity('Admin login successful', email, email, ipAddress, userAgent);
-            } catch (dbError) {
-                console.log('Database logging failed, but login successful');
-            }
-            
             return {
                 statusCode: 200,
                 body: JSON.stringify({
@@ -40,13 +29,6 @@ exports.handler = async (event, context) => {
                 })
             };
         } else {
-            // Log failed login if database is available
-            try {
-                await database.logActivity('Admin login failed', email, email, ipAddress, userAgent);
-            } catch (dbError) {
-                console.log('Database logging failed');
-            }
-            
             return {
                 statusCode: 401,
                 body: JSON.stringify({
