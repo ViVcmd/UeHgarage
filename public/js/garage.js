@@ -28,15 +28,15 @@ async function initializeGarage() {
 
 async function checkAuth() {
     try {
-        const authData = await apiCall('/.auth/me');
+        const userEmail = getUserEmail();
         
-        if (!authData.clientPrincipal) {
+        if (!userEmail) {
             window.location.href = '/index.html';
             return;
         }
         
-        currentUser = authData.clientPrincipal;
-        document.getElementById('user-email').textContent = currentUser.userDetails;
+        currentUser = { userDetails: userEmail };
+        document.getElementById('user-email').textContent = userEmail;
     } catch (error) {
         console.error('Auth check failed:', error);
         window.location.href = '/index.html';
@@ -88,11 +88,12 @@ async function checkLocationPermission() {
             updateDistanceInfo(data.distance, data.maxDistance);
             await updateGarageStatus();
         } else {
-            showLocationDenied(data.distance, data.maxDistance);
+            showLocationDenied(data.distance, data.maxDistance, data.reason);
         }
     } catch (error) {
-        console.error('Location check failed:', error);
-        showSystemError('Failed to verify location: ' + error.message);
+        showError('Location check failed: ' + error.message);
+        hideElement('location-check');
+        showElement('location-denied');
     }
 }
 
@@ -104,7 +105,6 @@ async function updateGarageStatus() {
         document.getElementById('garage-status').innerHTML = 
             `🚗 UeH Garage Status: <span class="status-text">${statusText}</span>`;
         
-        // Update status indicator
         const statusLight = document.getElementById('status-light');
         const statusLabel = document.getElementById('status-label');
         
@@ -125,11 +125,12 @@ async function openGarage() {
         showError('Location not available. Please refresh the page.');
         return;
     }
+
     setButtonLoading('open-garage-btn', true);
     
     try {
         const data = await retryOperation(async () => {
-            return await apiCall('/api/garage/control', {
+            return await apiCallWithAuth('/api/garage/control', {
                 method: 'POST',
                 body: JSON.stringify({
                     action: 'open',
@@ -139,10 +140,10 @@ async function openGarage() {
         });
         
         if (data.success) {
+            document.getElementById('garage-status').innerHTML = '🚗 UeH Garage Status: <span class="status-text">Opening...</span>';
             showSuccess('UeH Garage opened successfully!');
             updateLastAction(`Garage opened from ${Math.round(data.distance)}m away`);
             
-            // Update status after delay
             setTimeout(updateGarageStatus, 3000);
         } else {
             showError('Failed to open garage: ' + data.message);
@@ -184,130 +185,4 @@ function setupEventListeners() {
     }
 }
 
-function startStatusUpdates() {
-    // Update status every 30 seconds
-    statusInterval = setInterval(updateGarageStatus, CONFIG.STATUS_REFRESH_INTERVAL);
-}
-
-function stopStatusUpdates() {
-    if (statusInterval) {
-        clearInterval(statusInterval);
-        statusInterval = null;
-    }
-}
-
-async function refreshAll() {
-    setButtonLoading('refresh-btn', true);
-    
-    try {
-        await updateGarageStatus();
-        await checkLocationPermission();
-        showSuccess('Status refreshed');
-    } catch (error) {
-        showError('Refresh failed: ' + error.message);
-    } finally {
-        setButtonLoading('refresh-btn', false);
-    }
-}
-
-async function retryLocation() {
-    setButtonLoading('retry-location-btn', true);
-    hideElement('location-denied');
-    
-    try {
-        await getUserLocation();
-    } catch (error) {
-        showError('Location retry failed: ' + error.message);
-    } finally {
-        setButtonLoading('retry-location-btn', false);
-    }
-}
-
-function updateLoadingMessage(message) {
-    const loadingMsg = document.getElementById('loading-message');
-    if (loadingMsg) {
-        loadingMsg.textContent = message;
-    }
-}
-
-function updateLastAction(message) {
-    const lastActionText = document.getElementById('last-action-text');
-    if (lastActionText) {
-        lastActionText.textContent = `${formatTime(new Date())} - ${message}`;
-    }
-}
-
-function updateDistanceInfo(distance, maxDistance) {
-    const distanceInfo = document.getElementById('distance-info');
-    if (distanceInfo) {
-        distanceInfo.textContent = `Distance: ${Math.round(distance)}m (Max: ${maxDistance}m)`;
-    }
-}
-
-function showLocationDenied(distance, maxDistance) {
-    const distanceMessage = document.getElementById('distance-message');
-    if (distanceMessage) {
-        distanceMessage.textContent = 
-            `You are ${Math.round(distance)}m away from UeH Garage. Maximum allowed distance is ${maxDistance}m.`;
-    }
-    showElement('location-denied');
-}
-
-function showLocationError(error) {
-    let message = 'Unable to get your location for UeH Garage access.';
-    
-    switch (error.code) {
-        case error.PERMISSION_DENIED:
-            message = 'Location access denied. Please enable location permissions and refresh.';
-            break;
-        case error.POSITION_UNAVAILABLE:
-            message = 'Location information unavailable. Please check your GPS settings.';
-            break;
-        case error.TIMEOUT:
-            message = 'Location request timed out. Please try again.';
-            break;
-    }
-    
-    showSystemError(message);
-}
-
-function showSystemError(message) {
-    const errorDetails = document.getElementById('error-details');
-    if (errorDetails) {
-        errorDetails.textContent = message;
-    }
-    
-    hideElement('loading-section');
-    hideElement('location-check');
-    hideElement('garage-controls');
-    hideElement('location-denied');
-    showElement('error-section');
-}
-
-function logout() {
-    const staySignedIn = document.getElementById('stay-signed-in');
-    const shouldStaySignedIn = staySignedIn ? staySignedIn.checked : false;
-    
-    stopStatusUpdates();
-    
-    if (!shouldStaySignedIn) {
-        // Clear any local storage if needed
-        localStorage.removeItem('uehGaragePreferences');
-    }
-    
-    window.location.href = '/.auth/logout';
-}
-
-// Cleanup on page unload
-window.addEventListener('beforeunload', () => {
-    stopStatusUpdates();
-});
-
-// Handle visibility change (pause updates when tab not visible)
-document.addEventListener('visibilitychange', () => {
-    if (document.hidden) {
-        stopStatusUpdates();
-    } else {
-        startStatusUpdates();
-    }
-});
+function startStatusUp

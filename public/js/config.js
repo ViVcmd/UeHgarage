@@ -4,12 +4,14 @@ const CONFIG = {
     VERSION: '1.0.0',
     MAX_RETRY_ATTEMPTS: 3,
     RETRY_DELAY: 1000,
-    SESSION_CHECK_INTERVAL: 300000, // 5 minutes
+    SESSION_CHECK_INTERVAL: 300000,
     LOCATION_TIMEOUT: 10000,
-    STATUS_REFRESH_INTERVAL: 30000 // 30 seconds
+    STATUS_REFRESH_INTERVAL: 30000,
+    NOTIFICATION_DURATION: 5000,
+    SUCCESS_DURATION: 3000
 };
 
-// Utility functions
+// Global utility functions
 function showElement(id) {
     const element = document.getElementById(id);
     if (element) element.style.display = 'block';
@@ -20,10 +22,9 @@ function hideElement(id) {
     if (element) element.style.display = 'none';
 }
 
-function showError(message, duration = 5000) {
+function showError(message, duration = CONFIG.NOTIFICATION_DURATION) {
     console.error('UeH Garage Error:', message);
     
-    // Create or update error notification
     let errorDiv = document.getElementById('error-notification');
     if (!errorDiv) {
         errorDiv = document.createElement('div');
@@ -41,14 +42,12 @@ function showError(message, duration = 5000) {
     `;
     errorDiv.style.display = 'block';
     
-    // Auto-hide after duration
     setTimeout(() => hideError(), duration);
 }
 
-function showSuccess(message, duration = 3000) {
+function showSuccess(message, duration = CONFIG.SUCCESS_DURATION) {
     console.log('UeH Garage Success:', message);
     
-    // Create or update success notification
     let successDiv = document.getElementById('success-notification');
     if (!successDiv) {
         successDiv = document.createElement('div');
@@ -66,7 +65,6 @@ function showSuccess(message, duration = 3000) {
     `;
     successDiv.style.display = 'block';
     
-    // Auto-hide after duration
     setTimeout(() => hideSuccess(), duration);
 }
 
@@ -108,9 +106,12 @@ function validateAccessCode(code) {
     return re.test(code);
 }
 
-// Distance calculation
 function calculateDistance(lat1, lng1, lat2, lng2) {
-    const R = 6371e3; // Earth's radius in meters
+    if (!isValidCoordinate(lat1, lng1) || !isValidCoordinate(lat2, lng2)) {
+        throw new Error('Invalid coordinates provided');
+    }
+
+    const R = 6371e3;
     const φ1 = lat1 * Math.PI/180;
     const φ2 = lat2 * Math.PI/180;
     const Δφ = (lat2-lat1) * Math.PI/180;
@@ -121,10 +122,19 @@ function calculateDistance(lat1, lng1, lat2, lng2) {
               Math.sin(Δλ/2) * Math.sin(Δλ/2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 
-    return R * c; // Distance in meters
+    return R * c;
 }
 
-// Retry mechanism
+function isValidCoordinate(lat, lng) {
+    return (
+        typeof lat === 'number' && 
+        typeof lng === 'number' &&
+        lat >= -90 && lat <= 90 &&
+        lng >= -180 && lng <= 180 &&
+        !isNaN(lat) && !isNaN(lng)
+    );
+}
+
 async function retryOperation(operation, maxAttempts = CONFIG.MAX_RETRY_ATTEMPTS) {
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
         try {
@@ -136,13 +146,11 @@ async function retryOperation(operation, maxAttempts = CONFIG.MAX_RETRY_ATTEMPTS
                 throw error;
             }
             
-            // Wait before retry
             await new Promise(resolve => setTimeout(resolve, CONFIG.RETRY_DELAY * attempt));
         }
     }
 }
 
-// API helper with error handling
 async function apiCall(url, options = {}) {
     const defaultOptions = {
         headers: {
@@ -167,7 +175,6 @@ async function apiCall(url, options = {}) {
     }
 }
 
-// Format time
 function formatTime(date) {
     return new Intl.DateTimeFormat('en-US', {
         hour: '2-digit',
@@ -176,7 +183,6 @@ function formatTime(date) {
     }).format(date);
 }
 
-// Format date
 function formatDate(date) {
     return new Intl.DateTimeFormat('en-US', {
         year: 'numeric',
@@ -187,7 +193,6 @@ function formatDate(date) {
     }).format(date);
 }
 
-// Session management
 function startSessionTimer() {
     const sessionElement = document.getElementById('session-time');
     if (!sessionElement) return;
@@ -202,118 +207,62 @@ function startSessionTimer() {
     }, 1000);
 }
 
-// Add notification styles
-const notificationStyles = `
-.error-notification, .success-notification {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    z-index: 10000;
-    max-width: 400px;
-    border-radius: 8px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-    animation: slideIn 0.3s ease-out;
-    display: none;
+// User email management for Netlify
+function setUserEmail(email) {
+    localStorage.setItem('ueh_garage_user_email', email);
 }
 
-.error-notification {
-    background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
-    color: white;
+function getUserEmail() {
+    return localStorage.getItem('ueh_garage_user_email');
 }
 
-.success-notification {
-    background: linear-gradient(135deg, #27ae60 0%, #229954 100%);
-    color: white;
+function clearUserEmail() {
+    localStorage.removeItem('ueh_garage_user_email');
 }
 
-.error-content, .success-content {
-    padding: 15px 20px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
+// Enhanced API call with user authentication
+async function apiCallWithAuth(url, options = {}) {
+    const userEmail = getUserEmail();
+    
+    return await apiCall(url, {
+        ...options,
+        headers: {
+            'x-user-email': userEmail,
+            ...options.headers
+        }
+    });
 }
 
-.error-icon, .success-icon {
-    font-size: 1.2em;
-}
-
-.error-text, .success-text {
-    flex: 1;
-    font-weight: 500;
-}
-
-.error-close, .success-close {
-    background: none;
-    border: none;
-    color: white;
-    font-size: 1.5em;
-    cursor: pointer;
-    padding: 0;
-    width: 24px;
-    height: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-    transition: background 0.2s;
-}
-
-.error-close:hover, .success-close:hover {
-    background: rgba(255, 255, 255, 0.2);
-}
-
-@keyframes slideIn {
-    from {
-        transform: translateX(100%);
-        opacity: 0;
-    }
-    to {
-        transform: translateX(0);
-        opacity: 1;
-    }
-}
-
-@media (max-width: 768px) {
-    .error-notification, .success-notification {
-        left: 20px;
-        right: 20px;
-        max-width: none;
-    }
-}
-`;
-
-// Inject notification styles
-if (!document.getElementById('notification-styles')) {
-    const styleSheet = document.createElement('style');
-    styleSheet.id = 'notification-styles';
-    styleSheet.textContent = notificationStyles;
-    document.head.appendChild(styleSheet);
-}
-
-// Global error handler
+// Global error handlers
 window.addEventListener('error', (event) => {
     console.error('Global error:', event.error);
     showError('An unexpected error occurred. Please refresh the page.');
 });
 
-// Global unhandled promise rejection handler
 window.addEventListener('unhandledrejection', (event) => {
     console.error('Unhandled promise rejection:', event.reason);
     showError('A system error occurred. Please try again.');
 });
 
-// Export for use in other files
+// Expose global functions
 window.CONFIG = CONFIG;
 window.showElement = showElement;
 window.hideElement = hideElement;
 window.showError = showError;
 window.showSuccess = showSuccess;
+window.hideError = hideError;
+window.hideSuccess = hideSuccess;
 window.setButtonLoading = setButtonLoading;
 window.validateEmail = validateEmail;
 window.validateAccessCode = validateAccessCode;
 window.calculateDistance = calculateDistance;
+window.isValidCoordinate = isValidCoordinate;
 window.retryOperation = retryOperation;
 window.apiCall = apiCall;
+window.apiCallWithAuth = apiCallWithAuth;
 window.formatTime = formatTime;
 window.formatDate = formatDate;
 window.startSessionTimer = startSessionTimer;
+window.setUserEmail = setUserEmail;
+window.getUserEmail = getUserEmail;
+window.clearUserEmail = clearUserEmail;

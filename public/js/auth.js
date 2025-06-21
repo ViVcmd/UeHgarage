@@ -1,7 +1,6 @@
 let currentUser = null;
 let retryCount = 0;
 
-// Initialize authentication
 window.addEventListener('load', async () => {
     try {
         await initializeAuth();
@@ -12,7 +11,6 @@ window.addEventListener('load', async () => {
 });
 
 async function initializeAuth() {
-    // Enable Google login button
     const googleBtn = document.getElementById('google-login-btn');
     if (googleBtn) {
         googleBtn.disabled = false;
@@ -25,15 +23,15 @@ async function initializeAuth() {
 
 async function checkAuthStatus() {
     try {
-        const authData = await apiCall('/.auth/me');
+        const userEmail = getUserEmail();
         
-        if (authData.clientPrincipal) {
-            currentUser = authData.clientPrincipal;
+        if (userEmail) {
+            currentUser = { userDetails: userEmail };
             
-            // Check if admin
+            // Check if user is admin
             const adminData = await apiCall('/api/auth/admin-check', {
                 method: 'POST',
-                body: JSON.stringify({ email: currentUser.userDetails })
+                body: JSON.stringify({ email: userEmail })
             });
             
             if (adminData.isAdmin) {
@@ -42,6 +40,7 @@ async function checkAuthStatus() {
                 // Show code entry for regular users
                 showElement('code-section');
                 hideElement('login-section');
+                document.getElementById('user-email').textContent = userEmail;
             }
         }
     } catch (error) {
@@ -61,49 +60,68 @@ async function checkMaintenanceMode() {
         }
     } catch (error) {
         console.error('Maintenance check failed:', error);
+        // Continue with normal flow if maintenance check fails
     }
 }
 
 function setupEventListeners() {
-    // Google login button
     const googleBtn = document.getElementById('google-login-btn');
     if (googleBtn) {
         googleBtn.addEventListener('click', handleGoogleLogin);
     }
     
-    // Admin form
     const adminForm = document.getElementById('admin-form');
     if (adminForm) {
         adminForm.addEventListener('submit', handleAdminLogin);
     }
     
-    // Code form
     const codeForm = document.getElementById('code-form');
     if (codeForm) {
         codeForm.addEventListener('submit', handleCodeVerification);
     }
     
-    // Access code input formatting
     const accessCodeInput = document.getElementById('access-code');
     if (accessCodeInput) {
         accessCodeInput.addEventListener('input', formatAccessCodeInput);
         accessCodeInput.addEventListener('paste', handleCodePaste);
     }
     
-    // Back to login button
     const backBtn = document.getElementById('back-to-login');
     if (backBtn) {
         backBtn.addEventListener('click', () => {
             hideElement('code-section');
             showElement('login-section');
             currentUser = null;
+            clearUserEmail();
         });
     }
 }
 
 function handleGoogleLogin() {
     setButtonLoading('google-login-btn', true);
-    window.location.href = '/.auth/login/google';
+    
+    // For now, simulate OAuth with email input
+    // In production, you'd implement Netlify Identity or another OAuth provider
+    const email = prompt('Enter your email for UeH Garage access:');
+    
+    if (email && validateEmail(email)) {
+        setUserEmail(email);
+        currentUser = { userDetails: email };
+        
+        // Update UI to show email
+        const userEmailSpan = document.getElementById('user-email');
+        if (userEmailSpan) {
+            userEmailSpan.textContent = email;
+        }
+        
+        showElement('code-section');
+        hideElement('login-section');
+        showSuccess('Please enter your access code');
+    } else if (email) {
+        showError('Please enter a valid email address');
+    }
+    
+    setButtonLoading('google-login-btn', false);
 }
 
 async function handleAdminLogin(e) {
@@ -133,6 +151,7 @@ async function handleAdminLogin(e) {
         });
         
         if (data.success) {
+            setUserEmail(email);
             showSuccess('Admin login successful');
             setTimeout(() => {
                 window.location.href = '/admin.html';
@@ -184,7 +203,7 @@ async function handleCodeVerification(e) {
             showError('Invalid or expired access code');
         }
     } catch (error) {
-        showError('Code verification failed: ' + error.message);
+        showError('Verification failed: ' + error.message);
     } finally {
         setButtonLoading('code-form', false);
     }
@@ -193,7 +212,6 @@ async function handleCodeVerification(e) {
 function formatAccessCodeInput(e) {
     let value = e.target.value.replace(/[^A-Z0-9]/g, '').toUpperCase();
     
-    // Add dashes at appropriate positions
     if (value.length > 4) {
         value = value.substring(0, 4) + '-' + value.substring(4);
     }
@@ -215,7 +233,7 @@ function handleCodePaste(e) {
     }
 }
 
-// Session timeout handling
+// Session management
 let sessionTimeout;
 
 function resetSessionTimeout() {
@@ -223,15 +241,14 @@ function resetSessionTimeout() {
     sessionTimeout = setTimeout(() => {
         showError('Session expired. Please sign in again.');
         setTimeout(() => {
-            window.location.href = '/logout';
+            clearUserEmail();
+            window.location.href = '/index.html';
         }, 2000);
     }, CONFIG.SESSION_CHECK_INTERVAL);
 }
 
-// Reset timeout on user activity
 ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'].forEach(event => {
     document.addEventListener(event, resetSessionTimeout, true);
 });
 
-// Initial session timeout
 resetSessionTimeout();
